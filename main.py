@@ -13,17 +13,21 @@ if __name__ == '__main__':
     action_trajectory = []
 
     step = 0
+    print(s0)
 
     # while True:
-    for _ in range(4):
-
+    for _ in range(2):
         action = env.action_space.sample()
+        action = [19600.26190743, 364.7085358, 333.15]
         action = [0, 0, 0]
         next_state, _, done, _ = env.step(action)
+
         state_trajectory.append(next_state)
         action_trajectory.append(action)
-        print("{}th step".format(step))
+
         step += 1
+        print("{}th step".format(step))
+        print(next_state)
         # if done:
         #     break
 
