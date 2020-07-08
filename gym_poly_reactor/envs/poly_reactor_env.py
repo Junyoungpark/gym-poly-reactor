@@ -28,7 +28,7 @@ T_IN_M_MIN, T_IN_M_MAX = 60, 100  # [celsius]
 T_IN_AWT_MIN, T_IN_AWT_MAX = 60, 100  # [celsius]
 
 
-class Basic(gym.Env):
+class PolyReactor(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self):
@@ -41,7 +41,7 @@ class Basic(gym.Env):
                              T_EK_MAX, T_AWT_MAX, T_adiab_MAX, m_acc_F_MAX])
 
         self.observation_space = spaces.Box(
-            low=obs_low, max=obs_high, dtype=np.float32)
+            low=obs_low, high=obs_high, dtype=np.float32)
 
         act_low = np.array([m_DOT_F_MIN, T_IN_M_MIN, T_IN_AWT_MIN])
         act_high = np.array([m_DOT_F_MAX, T_IN_M_MAX, T_IN_AWT_MAX])
@@ -52,23 +52,23 @@ class Basic(gym.Env):
         # the state order
         self.state = None
         self._eps = 1e-20
-        self.tau = 0.01  # [sec] ; hopefully
+        self.tau = 50.0 / 3600.0  # 0.1  # [sec] ; hopefully
 
     def _get_copied_state(self):
         state = dc(self.state)
-        m_w, m_a, m_p, T_R, T_S, T_M, T_EK, T_AWT = np.split(state, 8, axis=1)
-        return m_w, m_a, m_p, T_R, T_S, T_M, T_EK, T_AWT
+        m_w, m_a, m_p, T_R, T_S, T_M, T_EK, T_AWT, T_adiab, m_acc = np.array_split(state, 10)
+        return m_w, m_a, m_p, T_R, T_S, T_M, T_EK, T_AWT, T_adiab, m_acc
 
     def _get_aux_variable(self):
         abs_zero = 273.15
-        m_w, m_a, m_p, T_R, T_S, _, T_EK, _ = self._get_copied_state()
+        m_w, m_a, m_p, T_R, T_S, _, T_EK, _, _, _ = self._get_copied_state()
 
         # TODO: 0 division edge case handling
 
         U = m_p / (m_a + m_p)
         m_ges = m_w + m_a + m_p
-        k_r1 = k_0 * np.exp(-E_a / R * (T_R + abs_zero)) * (k_U1 * (1 - U) + k_U2 * U)
-        k_r2 = k_0 * np.exp(-E_a / R * (T_EK + abs_zero)) * (k_U1 * (1 - U) + k_U2 * U)
+        k_r1 = k_0 * np.exp(-E_a / (R * (T_R + abs_zero))) * (k_U1 * (1 - U) + k_U2 * U)
+        k_r2 = k_0 * np.exp(-E_a / (R * (T_EK + abs_zero))) * (k_U1 * (1 - U) + k_U2 * U)
         k_K = (m_w * k_WS + m_a * k_AS + m_p * k_PS) / (m_ges)
         m_a_r = m_a - m_a * m_AWT / m_ges
 
@@ -83,7 +83,7 @@ class Basic(gym.Env):
         m_dot_f, t_m_in, t_awt_in = action[0], action[1], action[2]
 
         # copy the current state to prevent numerical problems from numpy referencing.
-        m_w, m_a, m_p, T_R, T_S, T_M, T_EK, T_AWT = self._get_copied_state()
+        m_w, m_a, m_p, T_R, T_S, T_M, T_EK, T_AWT, T_adiab, m_acc = self._get_copied_state()
         U, m_ges, k_r1, k_r2, k_K, m_a_r = self._get_aux_variable()
 
         # 1st ODE
@@ -99,13 +99,14 @@ class Basic(gym.Env):
         m_p_new = m_p + self.tau * m_p_dot
 
         # 4th ODE
-        _4th_ode_mul = (m_dot_f * c_pF(T_F - T_R) + delH_R * k_r1 * m_a_r - k_K * A_tank * (T_R - T_S) - fm_AWT * c_pR(
-            T_R - T_EK))
+        _4th_ode_mul = (
+                m_dot_f * c_pF * (T_F - T_R) + delH_R * k_r1 * m_a_r - k_K * A_tank * (T_R - T_S) - fm_AWT * c_pR * (
+                T_R - T_EK))
         T_R_dot = 1 / (c_pR * m_ges) * _4th_ode_mul
         T_R_new = T_R + self.tau * T_R_dot
 
         # 5th ODE
-        T_S_dot = 1 / (c_pS * m_S) * (k_K * A_tank(T_R + 2 * T_S + T_M))
+        T_S_dot = 1 / (c_pS * m_S) * (k_K * A_tank * (T_R + 2 * T_S + T_M))
         T_S_new = T_S + self.tau * T_S_dot
 
         # 6th ODE
@@ -124,7 +125,17 @@ class Basic(gym.Env):
         T_AWT_dot = _8th_ode_numer / _8th_ode_denom
         T_AWT_new = T_AWT + self.tau * T_AWT_dot
 
-        state_new = [m_w_new, m_a_new, m_p_new, T_R_new, T_S_new, T_M_new, T_EK_new, T_AWT_new]
+        # SAFETY VARIABLES
+        # 9th ODE
+        T_adiab_dot = delH_R / (m_ges * c_pR) * m_a_dot - (m_w_dot + m_a_dot + m_p_dot) * (
+                (m_a * delH_R) / (m_ges ** 2 * c_pR)) + T_R_dot
+        T_adiab_new = T_adiab + self.tau * T_adiab_dot
+
+        # 10th ODE
+        m_acc_dot = m_dot_f
+        m_acc_new = m_acc + self.tau * m_acc_dot
+
+        state_new = [m_w_new, m_a_new, m_p_new, T_R_new, T_S_new, T_M_new, T_EK_new, T_AWT_new, T_adiab_new, m_acc_new]
         self.state = np.array(state_new)
         done = self.check_done()
 
@@ -133,7 +144,7 @@ class Basic(gym.Env):
             reward = 0
         else:
             reward = m_p_new - m_p
-        return np.state(state_new), reward, done, {}
+        return np.array(state_new).squeeze(), reward, done, {}
 
     def reset(self, random_init=False):
         x0 = [m_W_INIT, m_A_INIT, m_P_INIT,
@@ -153,5 +164,7 @@ class Basic(gym.Env):
         pass
 
     def check_done(self):
-        done = np.abs(self.state[2] - 20680) <= 1.0
+        done_state = np.abs(self.state[2] - 20680) <= 1.0
+        done_safety = self.state[8] >= 109
+        done = done_state or done_safety
         return done
