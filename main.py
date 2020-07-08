@@ -4,6 +4,7 @@ import numpy as np
 from gym_poly_reactor.envs.poly_reactor_env import PolyReactor
 
 if __name__ == '__main__':
+    abs_zero = 273.15
     env = PolyReactor()
     s0 = env.reset()
     len_episode = 100
@@ -14,10 +15,10 @@ if __name__ == '__main__':
     step = 0
 
     # while True:
-    for _ in range(10):
+    for _ in range(4):
 
         action = env.action_space.sample()
-        action = [13808, 343, 362]
+        action = [0, 0, 0]
         next_state, _, done, _ = env.step(action)
         state_trajectory.append(next_state)
         action_trajectory.append(action)

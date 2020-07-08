@@ -7,25 +7,28 @@ from gym import spaces
 from gym_poly_reactor.envs.params import *  # import parameters of the simulator
 
 # TODO: Put original authors and link
-T_SET = 90.0  # [celsius]
+
+abs_zero = 273.15
+T_SET = 90.0 + abs_zero  # [Kelvin]
+temp_range = 2.0
 
 # State spaces and initial states
 m_W_INIT, m_W_MIN, m_W_MAX = 10000, 0, np.inf  # [kg]
 m_A_INIT, m_A_MIN, m_A_MAX = 853, 0, np.inf  # [kg]
 m_P_INIT, m_P_MIN, m_P_MAX = 26.5, 0, np.inf  # [kg]
 
-T_R_INIT, T_R_MIN, T_R_MAX = 90.0, T_SET - 2.0, T_SET + 2.0  # [celsius]
-T_S_INIT, T_S_MIN, T_S_MAX = 90.0, 0, 100  # [celsius]
-T_M_INIT, T_M_MIN, T_M_MAX = 90.0, 0, 100  # [celsius]
-T_EK_INIT, T_EK_MIN, T_EK_MAX = 35.0, 0, 100  # [celsius]
-T_AWT_INIT, T_AWT_MIN, T_AWT_MAX = 35.0, 0, 100  # [celsius]
-T_adiab_INIT, T_adiab_MIN, T_adiab_MAX = 104.897, 0, 109  # [celsius]
-m_acc_F_init, m_acc_F_MIN, m_acc_F_MAX = 0, 0, 30000  # [kg]
+T_R_INIT, T_R_MIN, T_R_MAX = 90.0 + abs_zero, T_SET - temp_range, T_SET + temp_range  # [Kelvin]
+T_S_INIT, T_S_MIN, T_S_MAX = 90.0 + abs_zero, abs_zero, 100 + abs_zero  # [Kelvin]
+T_M_INIT, T_M_MIN, T_M_MAX = 90.0 + abs_zero, abs_zero, 100 + abs_zero  # [Kelvin]
+T_EK_INIT, T_EK_MIN, T_EK_MAX = 35.0 + abs_zero, abs_zero, 100 + abs_zero  # [Kelvin]
+T_AWT_INIT, T_AWT_MIN, T_AWT_MAX = 35.0 + abs_zero, abs_zero, 100 + abs_zero  # [Kelvin]
+T_adiab_INIT, T_adiab_MIN, T_adiab_MAX = 378.04682, abs_zero, 109 + abs_zero  # [Kelvin]
+m_acc_F_init, m_acc_F_MIN, m_acc_F_MAX = 300, 0, 30000  # [kg]
 
 # Action space
 m_DOT_F_MIN, m_DOT_F_MAX = 0, 30000  # [kgh^-1]
-T_IN_M_MIN, T_IN_M_MAX = 60, 100  # [celsius]
-T_IN_AWT_MIN, T_IN_AWT_MAX = 60, 100  # [celsius]
+T_IN_M_MIN, T_IN_M_MAX = 60 + abs_zero, 100 + abs_zero  # [celsius]
+T_IN_AWT_MIN, T_IN_AWT_MAX = 60 + abs_zero, 100 + abs_zero  # [celsius]
 
 
 class PolyReactor(gym.Env):
@@ -67,8 +70,9 @@ class PolyReactor(gym.Env):
 
         U = m_p / (m_a + m_p)
         m_ges = m_w + m_a + m_p
-        k_r1 = k_0 * np.exp(-E_a / (R * (T_R + abs_zero))) * (k_U1 * (1 - U) + k_U2 * U)
-        k_r2 = k_0 * np.exp(-E_a / (R * (T_EK + abs_zero))) * (k_U1 * (1 - U) + k_U2 * U)
+        k_r1 = k_0 * np.exp(-E_a / (R * (T_R))) * (k_U1 * (1 - U) + k_U2 * U)
+        k_r2 = k_0 * np.exp(-E_a / (R * (T_EK))) * (k_U1 * (1 - U) + k_U2 * U)
+        print("here")
         k_K = (m_w * k_WS + m_a * k_AS + m_p * k_PS) / (m_ges)
         m_a_r = m_a - m_a * m_AWT / m_ges
 
