@@ -11,15 +11,20 @@ if __name__ == '__main__':
     state_trajectory = []
     action_trajectory = []
 
-    while True:
+    step = 0
 
-        action = [0, 80, 80]
-        #action = env.action_space.sample()
+    # while True:
+    for _ in range(10):
+
+        action = env.action_space.sample()
+        action = [13808, 343, 362]
         next_state, _, done, _ = env.step(action)
         state_trajectory.append(next_state)
         action_trajectory.append(action)
-        if done:
-            break
+        print("{}th step".format(step))
+        step += 1
+        # if done:
+        #     break
 
     # plotting state
     state_dim = env.observation_space.shape[0]
@@ -31,7 +36,7 @@ if __name__ == '__main__':
     for i, ax in enumerate(axs):
         ax.plot(full_trajectory[:, i])
 
-    fig.show()
+    plt.savefig('state.png')
 
     # plotting action
     action_dim = env.action_space.shape[0]
@@ -42,4 +47,4 @@ if __name__ == '__main__':
     for i, ax in enumerate(axs):
         ax.plot(action_trajectory[:, i])
 
-    fig.show()
+    plt.savefig('action.png')

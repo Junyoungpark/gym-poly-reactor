@@ -75,8 +75,8 @@ class PolyReactor(gym.Env):
         return U, m_ges, k_r1, k_r2, k_K, m_a_r
 
     def step(self, action):
-        err_msg = "%r (%s) invalid" % (action, type(action))
-        assert self.action_space.contains(action), err_msg
+        # err_msg = "%r (%s) invalid" % (action, type(action))
+        # assert self.action_space.contains(action), err_msg
 
         # Update 10 states ODEs in Euler method
 
@@ -91,32 +91,32 @@ class PolyReactor(gym.Env):
         m_w_new = m_w + self.tau * m_w_dot
 
         # 2nd ODE
-        m_a_dot = m_dot_f * w_WF - k_r1 * m_a_r - k_r2 * m_AWT * m_a / m_ges
+        m_a_dot = m_dot_f * w_AF - k_r1 * m_a_r - k_r2 * m_AWT * (m_a / m_ges)
         m_a_new = m_a + self.tau * m_a_dot
 
         # 3rd ODE
-        m_p_dot = k_r2 * m_a_r + p_1 * k_r2 * m_AWT * m_a / m_ges
+        m_p_dot = k_r1 * m_a_r + p_1 * k_r2 * m_AWT * m_a / m_ges
         m_p_new = m_p + self.tau * m_p_dot
 
         # 4th ODE
         _4th_ode_mul = (
                 m_dot_f * c_pF * (T_F - T_R) + delH_R * k_r1 * m_a_r - k_K * A_tank * (T_R - T_S) - fm_AWT * c_pR * (
                 T_R - T_EK))
-        T_R_dot = 1 / (c_pR * m_ges) * _4th_ode_mul
+        T_R_dot = 1.0 / (c_pR * m_ges) * _4th_ode_mul
         T_R_new = T_R + self.tau * T_R_dot
 
         # 5th ODE
-        T_S_dot = 1 / (c_pS * m_S) * (k_K * A_tank * (T_R + 2 * T_S + T_M))
+        T_S_dot = 1.0 / (c_pS * m_S) * (k_K * A_tank * (T_R - 2 * T_S + T_M))
         T_S_new = T_S + self.tau * T_S_dot
 
         # 6th ODE
         # TODO: double check equation
-        T_M_dot = 1 / (c_pW * m_M_KW) * (fm_M_KW * c_pW * (t_m_in - T_M) + k_K * A_tank * (T_S - T_M))
+        T_M_dot = 1.0 / (c_pW * m_M_KW) * (fm_M_KW * c_pW * (t_m_in - T_M) + k_K * A_tank * (T_S - T_M))
         T_M_new = T_M + self.tau * T_M_dot
 
         # 7th ODE
         _7th_ode_mul = (fm_AWT * c_pW * (T_R - T_EK) - alfa * (T_EK - T_AWT) + k_r2 * m_a * m_AWT * delH_R / m_ges)
-        T_EK_dot = 1 / (c_pR * m_AWT) * _7th_ode_mul
+        T_EK_dot = 1.0 / (c_pR * m_AWT) * _7th_ode_mul
         T_EK_new = T_EK + self.tau * T_EK_dot
 
         # 8th ODE
