@@ -88,7 +88,7 @@ def get_simulator():
     # Set the initial state of the controller and simulator:
     # assume nominal values of uncertain parameters as initial guess
     delH_R_real = 950.0
-    c_pR = 5.0
+    # c_pR = 5.0
 
     # x0 is a property of the simulator - we obtain it and set values.
     x0 = simulator.x0
