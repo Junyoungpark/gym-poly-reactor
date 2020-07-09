@@ -2,8 +2,9 @@ from copy import deepcopy as dc
 
 import gym
 import numpy as np
-from gym import spaces
+import torch
 
+from gym import spaces
 from gym_poly_reactor.envs.get_do_mpc_model import get_simulator
 
 # TODO: Put original authors and link
@@ -60,7 +61,10 @@ class PolyReactor(gym.Env):
         self.T_adiab = T_adiab_INIT
 
     def step(self, action):
-        action = action.reshape(-1, 1)
+        if type(action) == torch.Tensor:
+            action = action.detach().numpy()
+
+        action = np.array(action).reshape(-1, 1)
 
         state_new = self.simulator.make_step(action)
         self.state = self.simulator.x0
@@ -68,13 +72,14 @@ class PolyReactor(gym.Env):
         self.m_p_new = state_new[2]
         self.T_adiab = state_new[-1]
 
-        done = self.check_done()
+        done, done_reward = self.check_done()
 
         # TODO: Design reward depending on the goal
-        if done:
-            reward = 0
-        else:
-            reward = self.m_p_new - self.m_p_old
+        # if done:
+        #     reward = 0
+        # else:
+        stage_reward = self.m_p_new - self.m_p_old
+        reward = stage_reward + done_reward
 
         self.m_p_new = self.m_p_old
 
@@ -82,7 +87,10 @@ class PolyReactor(gym.Env):
 
     def reset(self, random_init=False):
         self.simulator = get_simulator()
-        self.state = self.simulator.x0
+        x0 = self.simulator.x0
+        state = [x0['m_W'], x0['m_A'], x0['m_P'], x0['T_R'], x0['T_S'], x0['Tout_M'], x0['T_EK'], x0['Tout_AWT'],
+                 x0['accum_monom'], x0['T_adiab']]
+        self.state = np.array(state)
 
         return self.state
 
@@ -96,4 +104,12 @@ class PolyReactor(gym.Env):
         done_state = np.abs(self.m_p_new - 20680) <= 1.0
         done_safety = self.T_adiab >= 109 + 273.15
         done = done_state or done_safety
-        return done
+
+        if done_safety:
+            done_reward = -1000
+        elif done_state:
+            done_reward = 1000
+        else:
+            done_reward = 0
+
+        return done, done_reward
