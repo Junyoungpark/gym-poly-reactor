@@ -1,12 +1,56 @@
 import torch
-
+from collections import deque
 import torch.nn as nn
 import numpy as np
+import random
 
 
 def update_target(target_params, source_params, tau=0.1):
     for t, s in zip(target_params, source_params):
         pass
+
+
+class ReplayMemory:
+    def __init__(self, length):
+        self.memory = deque(maxlen=length)
+
+    def __len__(self):
+        return len(self.memory)
+
+    def save_memory(self, transition):
+        s, a, r, s_, t = transition
+
+        s = s.numpy()
+        s_ = s_.numpy()
+
+        transition = [s, a, r, s_, t]
+        self.memory.append(transition)
+
+    def sample(self, size):
+        sample = random.sample(self.memory, size)
+
+        state = [i[0] for i in sample]
+        action = [i[1] for i in sample]
+        reward = [i[2] for i in sample]
+        next_state = [i[3] for i in sample]
+        terminal = [i[4] for i in sample]
+
+        state = np.stack(state)
+        state = torch.tensor(state)
+
+        next_state = np.stack(next_state)
+        next_state = torch.tensor(next_state)
+
+        reward = np.array(reward)
+        reward = torch.tensor(reward, dtype=torch.float32).reshape(-1, 1)
+
+        terminal = np.array(terminal).astype(int)
+        terminal = torch.tensor(terminal).reshape(-1, 1)
+
+        action = np.array(action)
+        action = torch.tensor(action, dtype=torch.float32).reshape(-1, 1)
+
+        return state, action, reward, next_state, terminal
 
 
 class DDPGAgent(nn.Module):
@@ -22,46 +66,63 @@ class DDPGAgent(nn.Module):
         self.critic_target = Critic(state_dim, action_dim)
         self.actor_target = Actor(state_dim, action_dim)
 
+        self.update_model(self.critic, self.critic_target, tau=1.0)
+        self.update_model(self.actor, self.actor_target, tau=1.0)
+
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-4)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-3)
 
-        self.memory = None
+        self.memory = ReplayMemory(50000)
+        self.batch_size = 500
+        self.tau = 0.005
 
         self.loss_ftn = nn.MSELoss()
 
     def get_action(self, state):
         action_before_norm = self.actor(state)
 
-        action_after_norm = action_before_norm.data * (self.action_max - self.action_min) + self.action_min
+        action_after_norm = (action_before_norm.data + 1) / 2 * (self.action_max - self.action_min) + self.action_min
 
         return action_after_norm.data
 
-    def fit(self, batch):
-        batch = self.memory.sample()
+    def save_transition(self, transition):
+        self.memory.save_memory(transition)
 
-        state_batch = None
-        action_batch = None
-        next_state_batch = None
-        reward_batch = None
-        terminal_batch = None
+    def train_start(self):
+        return len(self.memory) > self.batch_size
 
-        next_q_val = self.critic_target(next_state_batch, self.actor_target(next_state_batch))
-        target_q_batch = reward_batch + self.gamma * terminal_batch * next_q_val
+    def update_model(self, source, target, tau):
+        for src_param, target_param in zip(source.parameters(), target.parameters()):
+            target_param.data.copy_(tau * src_param.data + (1.0 - tau) * target_param.data)
 
-        q_batch = self.critic(state_batch, action_batch)
+    def fit(self):
+        state, action, reward, next_state, terminal = self.memory.sample(self.batch_size)
 
-        value_loss = self.loss_ftn(q_batch, target_q_batch)
+        next_q_val = self.critic_target(next_state, self.actor_target(next_state))
+        target_q = reward + self.gamma * (1 - terminal) * next_q_val
+        q = self.critic(state, action)
+
+        # Critic loss
+        value_loss = self.loss_ftn(q, target_q)
 
         # Critic update
-        self.critic.zero_grad()
+        self.critic_optimizer.zero_grad()
         value_loss.backward()
         self.critic_optimizer.step()
 
-        policy_loss = -self.critic(state_batch, self.actor(state_batch))
+        # Actor loss
+        policy_loss = -self.critic(state, self.actor(state))
+        policy_loss = policy_loss.mean()
+
         # Actor update
         self.actor_optimizer.zero_grad()
         policy_loss.backward()
         self.actor_optimizer.step()
+
+        self.update_model(self.critic, self.critic_target, tau=self.tau)
+        self.update_model(self.actor, self.actor_target, tau=self.tau)
+
+        return value_loss.item(), policy_loss.item()
 
 
 class Critic(nn.Module):
