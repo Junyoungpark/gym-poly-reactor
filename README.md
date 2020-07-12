@@ -3,7 +3,7 @@ a discrete version of industrial polymerization reactor environment. this packag
 the original formulation and documentation about the model can be found from [here](https://www.do-mpc.com/en/latest/example_gallery/industrial_poly.html).
 
 ## installation 
-we supports pip installation.
+we support `pip` installation.
 
 ```
 pip install gym-poly-reactor
@@ -14,6 +14,8 @@ pip install gym-poly-reactor
 1. `numpy`
 2. `gym`
 3. `do-mpc`
+
+If you install the package through `pip`, then the pip installation precedure would install the dependencies also. 
 
 ## Quickstart
 You can easily simulate one episode of industrial polyerization reactor environment by using following code
