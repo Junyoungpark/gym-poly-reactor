@@ -48,4 +48,6 @@ if __name__ == '__main__':
     for i, ax in enumerate(axs):
         ax.plot(action_trajectory[:, i])
 
+
+
     plt.savefig('action.png')
