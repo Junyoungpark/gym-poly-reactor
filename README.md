@@ -2,7 +2,7 @@
 a discrete version of industrial polymerization reactor environment. this package is a gym-style warapping of `do-mpc` industrial polyerization reactor model.
 the original formulation and documentation about the model can be found from [here](https://www.do-mpc.com/en/latest/example_gallery/industrial_poly.html).
 
-## installation 
+## Installation 
 we support `pip` installation.
 
 ```
