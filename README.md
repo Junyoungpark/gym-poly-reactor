@@ -18,7 +18,7 @@ pip install gym-poly-reactor
 If you install the package through `pip`, then the pip installation precedure would install the dependencies also. 
 
 ## Quickstart
-You can easily simulate one episode of industrial polyerization reactor environment by using following code
+You can easily simulate one episode of industrial polyerization reactor environment by using the following code snippet
 
 ```python
 from gym_poly_reactor.envs.poly_reactor import PolyReactor
