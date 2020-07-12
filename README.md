@@ -30,7 +30,7 @@ while True:
   next_state, reward, done, _ = env.step(action)
 ```
 
-## Description about industrial polymerization reactor MDP.
+## Description about industrial polymerization reactor MDP
 :construction: :construction: :construction: :construction: 
 the documentation will be updated soon :smiley:
 
