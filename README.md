@@ -29,3 +29,13 @@ while True:
   action = env.env.action_space.sample()
   next_state, reward, done, _ = env.step(action)
 ```
+
+## Description about industrial polyerization reactor MDP.
+:construction: :construction: :construction: :construction: 
+the documentation will be updated soon :smiley:
+
+### About state and action
+
+### About goal and reward
+
+### About epsiode termination
