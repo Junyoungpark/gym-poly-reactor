@@ -21,7 +21,7 @@ class ReplayMemory:
         s, a, r, s_, t = transition
 
         s = s.numpy()
-        s_ = s_.numpy()
+        # s_ = s_.numpy()
 
         transition = [s, a, r, s_, t]
         self.memory.append(transition)
@@ -36,10 +36,10 @@ class ReplayMemory:
         terminal = [i[4] for i in sample]
 
         state = np.stack(state)
-        state = torch.tensor(state)
+        state = torch.Tensor(state).squeeze()
 
         next_state = np.stack(next_state)
-        next_state = torch.tensor(next_state)
+        next_state = torch.Tensor(next_state).squeeze()
 
         reward = np.array(reward)
         reward = torch.tensor(reward, dtype=torch.float32).reshape(-1, 1)
@@ -47,8 +47,9 @@ class ReplayMemory:
         terminal = np.array(terminal).astype(int)
         terminal = torch.tensor(terminal).reshape(-1, 1)
 
-        action = np.array(action)
-        action = torch.tensor(action, dtype=torch.float32).reshape(-1, 1)
+        # action = np.array(action)
+        # action = torch.tensor(action, dtype=torch.float32).reshape(-1, 1)
+        action = torch.stack(action).squeeze().float()
 
         return state, action, reward, next_state, terminal
 
@@ -73,7 +74,7 @@ class DDPGAgent(nn.Module):
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=1e-3)
 
         self.memory = ReplayMemory(50000)
-        self.batch_size = 500
+        self.batch_size = 50
         self.tau = 0.005
 
         self.loss_ftn = nn.MSELoss()
@@ -83,7 +84,7 @@ class DDPGAgent(nn.Module):
 
         action_after_norm = (action_before_norm.data + 1) / 2 * (self.action_max - self.action_min) + self.action_min
 
-        return action_after_norm.data
+        return action_before_norm.data, action_after_norm.data
 
     def save_transition(self, transition):
         self.memory.save_memory(transition)

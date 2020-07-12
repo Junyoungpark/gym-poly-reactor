@@ -27,17 +27,36 @@ if __name__ == '__main__':
     state_trajectory = []
     action_trajectory = []
 
+    reward_trajectory = []
+    
+    critic_loss_traj = []
+    actor_loss_traj = []
+
     # while True:
-    for _ in range(100):
-        state_tensor = torch.Tensor(state).reshape(1, -1)
-        action = agent.get_action(state_tensor)
-        next_state, reward, done, _ = env.step(action)
+    for _ in range(1000):
+        state = env.reset()
+        sum_reward = 0
+        while True:
+            state_tensor = torch.Tensor(state).reshape(1, -1)
+            nn_action, action = agent.get_action(state_tensor)
+            next_state, reward, done, _ = env.step(action)
 
-        state_trajectory.append(next_state)
-        action_trajectory.append(action)
+            agent.save_transition((state_tensor, nn_action, reward, next_state, done))
 
-        if done:
-            break
+            sum_reward += reward
+
+            if agent.train_start():
+                critic_loss, actor_loss = agent.fit()
+
+                critic_loss_traj.append(critic_loss)
+                actor_loss_traj.append(actor_loss)
+
+                # print("critic loss:{}, actor loss:{}".format(critic_loss, actor_loss))
+
+            if done:
+                reward_trajectory.append(sum_reward)
+                print(sum_reward)
+                break
 
     # plotting state
     state_dim = env.observation_space.shape[0]
