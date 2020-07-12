@@ -39,3 +39,5 @@ the documentation will be updated soon :smiley:
 ### About goal and reward
 
 ### About epsiode termination
+
+### About the industrial polyerization reactor model
