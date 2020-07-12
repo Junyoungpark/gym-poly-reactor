@@ -15,7 +15,7 @@ pip install gym-poly-reactor
 2. `gym`
 3. `do-mpc`
 
-If you install the package through `pip`, then the pip installation precedure would install the dependencies also. 
+If you install the package through `pip`, then the pip installation procedure would install the dependencies also. 
 
 ## Quick start
 You can easily simulate one episode of industrial polymerization reactor environment by using the following code snippet
