@@ -26,8 +26,10 @@ from gym_poly_reactor.envs.poly_reactor import PolyReactor
 env = PolyReactor() # instantiate industrial polymerization reactor environment
 s0 = env.reset() # setup the model
 while True:
-  action = env.env.action_space.sample()
-  next_state, reward, done, _ = env.step(action)
+    action = env.action_space.sample()
+    next_state, reward, done, _ = env.step(action)
+    if done: # if termination condition is satisfied
+        break 
 ```
 
 ## Description about industrial polymerization reactor MDP
