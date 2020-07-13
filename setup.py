@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='gym_poly_reactor',
-    version='0.0',
+    version='0.1',
     description='OpenAI gym style industrial polymerization reactor simulator',
     author='Junyoung Park',
     author_email='junyoungpark@kaist.ac.kr',
